@@ -2,13 +2,13 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-class DisparityMapMaker:
-    def __init__(self):
-        pass
+# class DisparityMapMaker:
+#     def __init__(self,minimal_disparity,number_disparities,block_size):
+#         pass
 
 # Załaduj obrazy stereo (lewą i prawą kamerę)
-img_left = cv2.imread('left.png', cv2.IMREAD_GRAYSCALE)
-img_right = cv2.imread('right.png', cv2.IMREAD_GRAYSCALE)
+img_left = cv2.imread('./test_data/cones1.png', cv2.IMREAD_GRAYSCALE)
+img_right = cv2.imread('./test_data/cones2.png', cv2.IMREAD_GRAYSCALE)
 
 # Sprawdzenie, czy obrazy się załadowały
 if img_left is None or img_right is None:
