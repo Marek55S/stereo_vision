@@ -2,44 +2,41 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-# class DisparityMapMaker:
-#     def __init__(self,minimal_disparity,number_disparities,block_size):
-#         pass
+class DisparityMapMaker:
+    def __init__(self, min_disp=0, num_disp=16*5, block_size=5):
+        self.stereoSGBM = cv2.StereoSGBM.create(
+            minDisparity=min_disp,
+            numDisparities=num_disp,
+            blockSize=block_size,
+        )
 
-# Załaduj obrazy stereo (lewą i prawą kamerę)
-img_left = cv2.imread('./test_data/cones1.png', cv2.IMREAD_GRAYSCALE)
-img_right = cv2.imread('./test_data/cones2.png', cv2.IMREAD_GRAYSCALE)
+    def compute_disparity_from_images(self,left_image_path,right_image_path):
+        img_left, img_right = self._read_images_in_grayscale(left_image_path, right_image_path)
+        return self.stereoSGBM.compute(img_left, img_right).astype(np.float32) / 16.0
 
-# Sprawdzenie, czy obrazy się załadowały
-if img_left is None or img_right is None:
-    raise ValueError("Nie udało się załadować obrazów.")
+    def _read_images_in_grayscale(self, left_image_path, right_image_path):
+        img_left = cv2.imread(left_image_path, cv2.IMREAD_GRAYSCALE)
+        img_right = cv2.imread(right_image_path, cv2.IMREAD_GRAYSCALE)
 
-# Parametry SGBM
-min_disp = 0
-num_disp = 16 * 5  # musi być wielokrotnością 16
-block_size = 5
+        if img_left is None or img_right is None:
+            raise ValueError("Could not load images. Please check the paths.")
 
-stereo = cv2.StereoSGBM.create(
-    minDisparity=min_disp,
-    numDisparities=num_disp,
-    blockSize=block_size,
-    P1=8 * 1 * block_size ** 2,
-    P2=32 * 1 * block_size ** 2,
-    disp12MaxDiff=1,
-    uniquenessRatio=10,
-    speckleWindowSize=100,
-    speckleRange=32,
-    preFilterCap=63,
-    mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY
-)
+        return img_left, img_right
 
-# Obliczenie mapy dysparytetu
-disparity = stereo.compute(img_left, img_right).astype(np.float32) / 16.0
+    def visualize_disparity_from_images(self, left_image_path, right_image_path):
+        disparity = self.compute_disparity_from_images(left_image_path, right_image_path)
 
-# Wizualizacja
-plt.figure(figsize=(10, 5))
-plt.imshow(disparity, 'gray')
-plt.colorbar(label='Disparity')
-plt.title('Disparity Map (SGM)')
-plt.axis('off')
-plt.show()
+        plt.figure(figsize=(10, 5))
+        plt.imshow(disparity, 'gray')
+        plt.colorbar(label='Disparity')
+        plt.title('Disparity Map (SGM)')
+        plt.axis('off')
+        plt.show()
+
+if __name__ == "__main__":
+    # Example usage
+    left_image_path = '../test_data/teddy1.png'
+    right_image_path = '../test_data/teddy2.png'
+
+    disparity_maker = DisparityMapMaker()
+    disparity_maker.visualize_disparity_from_images(left_image_path, right_image_path)
