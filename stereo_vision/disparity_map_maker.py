@@ -40,30 +40,6 @@ class DisparityMapMaker:
         except Exception as e:
             print(f"Error visualizing disparity map: {e}")
 
-    def compute_depth_map(self, disparity_map, focal_length, baseline):
-        if np.any(disparity_map == 0):
-            raise ValueError("Disparity map contains zero values, cannot compute depth.")
-
-        disparity_map[disparity_map <= 0] = 0.01
-        depth_map = (focal_length * baseline) / disparity_map
-
-        return depth_map
-
-    def visualize_depth_map_from_images(self, left_image_path, right_image_path, focal_length, baseline):
-        try:
-            disparity = self.compute_disparity_from_images(left_image_path, right_image_path)
-            depth_map = self.compute_depth_map(disparity, focal_length, baseline)
-
-            plt.figure(figsize=(10, 5))
-            plt.imshow(depth_map, cmap='plasma')
-            plt.colorbar(label='Depth')
-            plt.title('Depth Map')
-            plt.axis('off')
-            plt.show()
-
-        except Exception as e:
-            print(f"Error visualizing depth map: {e}")
-
 
 
 if __name__ == "__main__":
