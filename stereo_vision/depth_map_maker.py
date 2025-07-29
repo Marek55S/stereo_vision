@@ -1,18 +1,38 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from stereo_vision.disparity_map_maker import DisparityMapMaker
 
 class DepthMapMaker:
     def __init__(self, disparity_map_maker, focal_length, baseline):
-        self.disparity_map_maker = disparity_map_maker
+        self.disparity_map_maker = DisparityMapMaker()
         self.focal_length = focal_length
         self.baseline = baseline
 
-    def compute_depth_map(self, disparity_map):
-        if np.any(disparity_map == 0):
-            raise ValueError("Disparity map contains zero values, cannot compute depth.")
+    def compute_depth_map_from_images(self, left_image_path, right_image_path):
+        try:
+            disparity_map = self.disparity_map_maker.compute_disparity_from_images(left_image_path, right_image_path)
+        except ValueError as e:
+            print(f"Error during disparity computation: {e}")
+            return None
 
         disparity_map[disparity_map <= 0] = 0.01
         depth_map = (self.focal_length * self.baseline) / disparity_map
 
         return depth_map
+
+    def visualize_depth_map_from_images(self, left_image_path, right_image_path):
+        try:
+            depth_map = self.compute_depth_map_from_images(left_image_path, right_image_path)
+            if depth_map is None:
+                return
+
+            plt.figure(figsize=(10, 5))
+            plt.imshow(depth_map, cmap='plasma')
+            plt.colorbar(label='Depth')
+            plt.title('Depth Map')
+            plt.axis('off')
+            plt.show()
+
+        except Exception as e:
+            print(f"Error visualizing depth map: {e}")
