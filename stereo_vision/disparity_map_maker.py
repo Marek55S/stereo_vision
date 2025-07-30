@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class DisparityMapMaker:
-    def __init__(self, min_disp=0, num_disp=16*5, block_size=5):
+    def __init__(self, min_disp=0, num_disp=16*3, block_size=10):
         self.stereoSGBM = cv2.StereoSGBM.create(
             minDisparity=min_disp,
             numDisparities=num_disp,
