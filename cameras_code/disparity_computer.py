@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
-
+from time import sleep
+from stereo_pair import StereoCamera
 
 class DisparityComputer:
     def __init__(self):
@@ -30,3 +31,37 @@ class DisparityComputer:
         # Przeskaluj do widocznego zakresu 0-255
         disp_vis = cv2.normalize(disparity, None, 0, 255, cv2.NORM_MINMAX)
         return disp_vis.astype(np.uint8)
+
+    def compute_disparity_live(self):
+        stereo = StereoCamera()
+        stereo.start()
+
+        sleep(1)
+        while True:
+            left, right = stereo.get_frames()
+            if left is None or right is None:
+                continue
+
+            disparity = self.compute(left, right)
+            disp_vis = self.normalize(disparity)
+
+            cv2.imshow("Disparity Map", disp_vis)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        stereo.stop()
+        cv2.destroyAllWindows()
+
+    def show_disparity(self, disparity):
+        disp_vis = self.normalize(disparity)
+        cv2.imshow("Disparity Map", disp_vis)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    disparity_computer = DisparityComputer()
+    disparity_computer.compute_disparity_live()
+    # Można również użyć:
+    # disparity_computer.show_disparity(disparity)
+    # gdzie 'disparity' to wcześniej obliczona mapa dysparycji.
