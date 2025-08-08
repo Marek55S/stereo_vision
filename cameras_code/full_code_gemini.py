@@ -93,7 +93,7 @@ class DisparityComputer:
 
     def __init__(self):
         # Parametry StereoSGBM. Wymagają dostrojenia dla najlepszych rezultatów.
-        self.stereo = cv2.StereoSGBM_create(
+        self.stereo = cv2.StereoSGBM.create(
             minDisparity=0,
             numDisparities=64,  # Musi być wielokrotnością 16
             blockSize=5,
