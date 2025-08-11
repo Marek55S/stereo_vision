@@ -93,7 +93,7 @@ class DisparityComputer:
 
     def __init__(self):
         # Parametry StereoSGBM. Wymagają dostrojenia dla najlepszych rezultatów.
-        self.stereo = cv2.StereoSGBM.create(
+        self.stereo = cv2.StereoSGBM_create(
             minDisparity=0,
             numDisparities=64,  # Musi być wielokrotnością 16
             blockSize=5,
@@ -138,14 +138,13 @@ class StereoObstacleAvoidance:
     Główna klasa aplikacji, która łączy wszystkie funkcje.
     """
 
-    def __init__(self, mavlink_connection_string):
+    def __init__(self, mavlink_connection_string, calibration_file="stereo_calibration.npz"):
         self.mavlink_connection_string = mavlink_connection_string
+        self.calibration_file = calibration_file
 
         # --- USTAWIENIA PARAMETRÓW KAMERY I MAVLINKA ---
-        # Wymagane jest dokładne skalibrowanie kamer, aby uzyskać dokładne wyniki.
-        # Te wartości są PRZYKŁADOWE i muszą być zastąpione przez rzeczywiste wartości z kalibracji.
-        self.FOCAL_LENGTH_PX = 2714.29  # Długość ogniskowej w pikselach
-        self.BASELINE_M = 0.06  # Odległość między kamerami w metrach (np. 6 cm)
+        self.FOCAL_LENGTH_PX = 2714.29  # Wartość PRZYKŁADOWA - zostanie zastąpiona kalibracją
+        self.BASELINE_M = 0.06  # Wartość PRZYKŁADOWA - zostanie zastąpiona kalibracją
         self.HORIZONTAL_FOV_DEG = 62.2  # Horyzontalne pole widzenia w stopniach
         self.IMAGE_WIDTH = 640
         self.IMAGE_HEIGHT = 480
@@ -155,14 +154,54 @@ class StereoObstacleAvoidance:
         # Minimalna odległość w metrach, poniżej której uznajemy przeszkodę za bardzo bliską
         self.MIN_DISTANCE_M = 0.5
 
+        # Inicjalizacja zmiennych kalibracyjnych
+        self.map1_left, self.map2_left = None, None
+        self.map1_right, self.map2_right = None, None
+        self.Q_matrix = None
+
         # Inicjalizacja komponentów
         self.stereo_cam = StereoCamera(resolution=(self.IMAGE_WIDTH, self.IMAGE_HEIGHT))
         self.disparity_comp = DisparityComputer()
-        self.depth_comp = DepthComputer(self.FOCAL_LENGTH_PX, self.BASELINE_M)
+        self.depth_comp = DepthComputer(self.FOCAL_LENGTH_PX,
+                                        self.BASELINE_M)  # Tymczasowo, zostanie zaktualizowana po wczytaniu kalibracji
 
         self.mav_connection = None
 
         self.is_running = False
+
+    def load_calibration_data(self):
+        """
+        Wczytuje macierze kalibracyjne z pliku.
+        """
+        if not os.path.exists(self.calibration_file):
+            print(
+                f"Błąd: Nie znaleziono pliku kalibracji '{self.calibration_file}'. Używane będą wartości domyślne, co może prowadzić do niedokładnych pomiarów.")
+            # Używamy domyślnych wartości
+            return
+
+        try:
+            calib_data = np.load(self.calibration_file)
+            self.map1_left = calib_data['map1_left']
+            self.map2_left = calib_data['map2_left']
+            self.map1_right = calib_data['map1_right']
+            self.map2_right = calib_data['map2_right']
+            self.Q_matrix = calib_data['Q']
+
+            # Ekstrakcja danych z macierzy Q dla obliczeń głębi
+            focal_length = self.Q_matrix[2, 3]
+            baseline_focal = -1 / self.Q_matrix[3, 2]  # (1 / Q[3,2])
+
+            # Aktualizacja obiektu DepthComputer o skalibrowane wartości
+            self.depth_comp.focal_length_px = focal_length
+            self.depth_comp.baseline_m = baseline_focal / focal_length
+
+            print(f"Dane kalibracyjne wczytane pomyślnie z '{self.calibration_file}'.")
+            print(f"Skalibrowana ogniskowa (px): {self.depth_comp.focal_length_px:.2f}")
+            print(f"Skalibrowana linia bazowa (m): {self.depth_comp.baseline_m:.4f}")
+
+        except Exception as e:
+            print(f"Błąd podczas wczytywania pliku kalibracji: {e}")
+            print("Używane będą wartości domyślne.")
 
     def connect_mavlink(self):
         """
@@ -234,6 +273,7 @@ class StereoObstacleAvoidance:
         """
         self.is_running = True
         try:
+            self.load_calibration_data()
             self.connect_mavlink()
             self.stereo_cam.start()
 
@@ -246,8 +286,17 @@ class StereoObstacleAvoidance:
                 if left is None or right is None:
                     continue
 
+                # Rektyfikacja obrazów (wyrównanie po kalibracji)
+                if self.map1_left is not None:
+                    left_rectified = cv2.remap(left, self.map1_left, self.map2_left, cv2.INTER_LINEAR)
+                    right_rectified = cv2.remap(right, self.map1_right, self.map2_right, cv2.INTER_LINEAR)
+                else:
+                    # Jeśli kalibracja nie została wczytana, używamy obrazów bez rektyfikacji
+                    left_rectified = left
+                    right_rectified = right
+
                 # Obliczenie mapy dysparycji
-                disparity = self.disparity_comp.compute(left, right)
+                disparity = self.disparity_comp.compute(left_rectified, right_rectified)
 
                 # Obliczenie mapy głębi
                 depth = self.depth_comp.compute_depth(disparity)
@@ -262,7 +311,7 @@ class StereoObstacleAvoidance:
                 # Wyświetlanie na ekranie (opcjonalne, może obciążać Raspberry Pi)
                 cv2.imshow("Disparity Map", disp_vis)
                 cv2.imshow("Depth Map", depth_vis)
-                cv2.imshow("Left Camera", left)
+                cv2.imshow("Left Camera", left_rectified)
 
                 # Zakończenie działania po naciśnięciu 'q'
                 if cv2.waitKey(1) & 0xFF == ord('q'):

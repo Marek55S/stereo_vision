@@ -1,8 +1,13 @@
-from picamera2 import Picamera2, MappedArray
 import threading
 import time
 import cv2
 import numpy as np
+
+try:
+    from picamera2 import Picamera2
+except ImportError:
+    print("Błąd: Biblioteka picamera2 nie jest zainstalowana. Uruchom 'pip install picamera2'")
+    exit()
 
 class StereoCamera:
     def __init__(self):

@@ -1,5 +1,4 @@
 import time
-import math
 import numpy as np
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2

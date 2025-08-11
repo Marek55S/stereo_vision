@@ -1,8 +1,5 @@
 import cv2
 import numpy as np
-from time import sleep
-from stereo_pair import StereoCamera
-from disparity_computer import DisparityComputer
 
 
 class EnhancedDepthComputer:

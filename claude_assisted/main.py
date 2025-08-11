@@ -1,14 +1,13 @@
 import cv2
 import numpy as np
 from time import sleep, time
-import threading
 import signal
 import sys
-from stereo_pair import StereoCamera
-from disparity_computer import DisparityComputer
-from enhanced_depth_computer import EnhancedDepthComputer
-from mavlink_communication import MAVLinkCommunication
-from obstacle_mapper import ObstacleMapper
+from cameras_code.stereo_pair import StereoCamera
+from cameras_code.disparity_computer import DisparityComputer
+from claude_assisted.enhanced_depth_computer import EnhancedDepthComputer
+from claude_assisted.mavlink_communication import MAVLinkCommunication
+from claude_assisted.obstacle_mapper import ObstacleMapper
 
 
 def signal_handler(sig, frame):
